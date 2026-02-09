@@ -732,4 +732,3 @@ MainTab.Visible = true
 -- [KODU BAŞLAT]
 StartLoading()
 print("qimpflex Hub v2 Loaded in CoreGui.")
-print('inj')
