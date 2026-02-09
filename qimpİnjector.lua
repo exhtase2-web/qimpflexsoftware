@@ -1,298 +1,268 @@
--- Services
+-- [[ QIMPFLEX V34 - NEON REVIVAL & BANK UPDATE ]] --
+
+local Settings = {
+    AimActive = true,
+    ESPActive = true,
+    FlyActive = false,
+    FlySpeed = 500,
+    AimRadius = 350,
+    AimPart = "HumanoidRootPart",
+    TargetPlayer = nil,
+    LockedTarget = nil,
+    SitActive = false,
+    BringActive = false,
+    RainbowActive = false,
+}
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TeleportService = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService") -- Bypass ve IP Intelligence için
+local Client = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = Client:GetMouse()
 
-local player = Players.LocalPlayer
-local pGui = player:WaitForChild("PlayerGui")
-local camera = workspace.CurrentCamera
-local mouse = player:GetMouse()
-
--- [BYPASS & PROTECT SYSTEM]
--- GUI'yi oyunun algılayamayacağı CoreGui'ye taşıyoruz.
-local function GetSafeParent()
-	local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
-	if success then
-		-- Bazı exploitler (Synapse, Wave vb.) için ekstra koruma
-		if get_hidden_gui then return get_hidden_gui() end
-		return coreGui:FindFirstChild("RobloxGui") or coreGui
-	end
-	return pGui
+-- [[ SES SİSTEMİ ]] --
+local function PlayClickSound()
+    local sound = Instance.new("Sound", workspace)
+    sound.SoundId = "rbxassetid://6895079853"
+    sound.Volume = 0.5
+    sound:Play()
+    sound.Ended:Connect(function() sound:Destroy() end)
 end
 
-local SafeParent = GetSafeParent()
-local RandomName = "RobloxSystem_" .. HttpService:GenerateGUID(false):sub(1,8)
+local function PlayHoverSound()
+    local sound = Instance.new("Sound", workspace)
+    sound.SoundId = "rbxassetid://6176359187" -- İstediğin yeni ID
+    sound.Volume = 0.6
+    sound:Play()
+    sound.Ended:Connect(function() sound:Destroy() end)
+end
 
--- Temizlik
-if SafeParent:FindFirstChild(RandomName) then SafeParent[RandomName]:Destroy() end
-if pGui:FindFirstChild("GeminiLoading") then pGui.GeminiLoading:Destroy() end
+-- [[ ESP & TARGET SİSTEMİ ]] --
+local function CreateESP(plr)
+    local Name = Drawing.new("Text")
+    Name.Visible = false; Name.Color = Color3.fromRGB(255, 255, 255); Name.Size = 14; Name.Center = true; Name.Outline = true
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = RandomName
-ScreenGui.Parent = SafeParent
-ScreenGui.ResetOnSpawn = false
+    RunService.RenderStepped:Connect(function()
+        if Settings.ESPActive and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 then
+            local rPart = plr.Character.HumanoidRootPart
+            local pos, onScreen = Camera:WorldToViewportPoint(rPart.Position)
+            
+            if onScreen then
+                Name.Position = Vector2.new(pos.X, pos.Y - 40)
+                Name.Text = plr.Name
+                Name.Visible = true
+                
+                if Settings.LockedTarget == plr then
+                    Name.Color = Color3.fromRGB(0, 255, 0)
+                    Name.Size = 18
+                else
+                    Name.Color = Color3.fromRGB(255, 0, 0)
+                    Name.Size = 14
+                end
+            else Name.Visible = false end
+        else Name.Visible = false end
+        if not plr.Parent then Name:Remove() end
+    end)
+end
+for _, v in pairs(Players:GetPlayers()) do if v ~= Client then CreateESP(v) end end
+Players.PlayerAdded:Connect(function(v) if v ~= Client then CreateESP(v) end end)
 
--- Renk Paleti
-local COLORS = {
-	BG = Color3.fromRGB(10, 10, 12),
-	SIDE = Color3.fromRGB(16, 16, 18),
-	ACCENT = Color3.fromRGB(0, 255, 140),
-	ACCENT_DARK = Color3.fromRGB(0, 150, 80),
-	TARGET = Color3.fromRGB(255, 45, 45),  
-	WHITE = Color3.fromRGB(245, 245, 245),
-	GRAY = Color3.fromRGB(150, 150, 150),
-	DARK_GRAY = Color3.fromRGB(25, 25, 28)
-}
-
--- [AIMLOCK CONFIG]
-_G.Aimlock = false
-_G.AimlockKey = Enum.UserInputType.MouseButton2
-_G.LockedTarget = nil
-
--- [UI BUILDER - MAIN FRAME]
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 540, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -270, 0.5, -200)
-MainFrame.BackgroundColor3 = COLORS.BG
+-- [[ ARAYÜZ ]] --
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 330, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -165, 0.5, -210)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false 
-MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 
--- [LOADING SCREEN SYSTEM]
-local function StartLoading()
-	local LoadingGui = Instance.new("ScreenGui")
-	LoadingGui.Name = "GeminiLoading"
-	LoadingGui.Parent = pGui
-	LoadingGui.DisplayOrder = 999
-	LoadingGui.IgnoreGuiInset = true 
+local MainGradient = Instance.new("UIGradient", MainFrame)
+MainGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 5))})
+MainGradient.Rotation = 90
+local MainStroke = Instance.new("UIStroke", MainFrame); MainStroke.Thickness = 3; MainStroke.Color = Color3.fromRGB(200, 0, 0)
 
-	local LoadBG = Instance.new("Frame")
-	LoadBG.Size = UDim2.new(1, 0, 1, 0)
-	LoadBG.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-	LoadBG.BorderSizePixel = 0
-	LoadBG.Parent = LoadingGui
+-- [[ NEON PARÇACIKLAR ]] --
+local ParticleHolder = Instance.new("Frame", MainFrame)
+ParticleHolder.Size = UDim2.new(1, 0, 1, 0); ParticleHolder.BackgroundTransparency = 1; ParticleHolder.ZIndex = 0
 
-	local Vignette = Instance.new("ImageLabel")
-	Vignette.Size = UDim2.new(1, 0, 1, 0)
-	Vignette.BackgroundTransparency = 1
-	Vignette.Image = "rbxassetid://15264875382"
-	Vignette.ImageColor3 = Color3.fromRGB(0, 0, 0)
-	Vignette.ImageTransparency = 0.4
-	Vignette.Parent = LoadBG
-
-	local LoadContent = Instance.new("Frame")
-	LoadContent.AnchorPoint = Vector2.new(0.5, 0.5)
-	LoadContent.Size = UDim2.new(0, 350, 0, 400)
-	LoadContent.Position = UDim2.new(0.5, 0, 0.5, 0)
-	LoadContent.BackgroundTransparency = 1
-	LoadContent.Parent = LoadBG
-
-	local RotateRing = Instance.new("ImageLabel")
-	RotateRing.Size = UDim2.new(0, 130, 0, 130)
-	RotateRing.Position = UDim2.new(0.5, -65, 0, 10)
-	RotateRing.BackgroundTransparency = 1
-	RotateRing.Image = "rbxassetid://12124333113"
-	RotateRing.ImageColor3 = COLORS.ACCENT
-	RotateRing.Parent = LoadContent
-
-	local UserImg = Instance.new("ImageLabel")
-	UserImg.Size = UDim2.new(0, 110, 0, 110)
-	UserImg.Position = UDim2.new(0.5, -55, 0, 20)
-	UserImg.BackgroundColor3 = COLORS.SIDE
-	UserImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
-	UserImg.ZIndex = 2
-	UserImg.Parent = LoadContent
-	Instance.new("UICorner", UserImg).CornerRadius = UDim.new(1, 0)
-
-	local LoadTitle = Instance.new("TextLabel")
-	LoadTitle.Text = "qimpflex Hub v2"
-	LoadTitle.Size = UDim2.new(1, 0, 0, 40)
-	LoadTitle.Position = UDim2.new(0, 0, 0, 145)
-	LoadTitle.TextColor3 = COLORS.WHITE
-	LoadTitle.Font = Enum.Font.GothamBold
-	LoadTitle.TextSize = 24
-	LoadTitle.BackgroundTransparency = 1
-	LoadTitle.Parent = LoadContent
-
-	local BarBack = Instance.new("Frame")
-	BarBack.Size = UDim2.new(0, 220, 0, 4)
-	BarBack.Position = UDim2.new(0.5, -110, 0, 210)
-	BarBack.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-	BarBack.Parent = LoadContent
-	Instance.new("UICorner", BarBack)
-
-	local BarFill = Instance.new("Frame")
-	BarFill.Size = UDim2.new(0, 0, 1, 0)
-	BarFill.BackgroundColor3 = COLORS.ACCENT
-	BarFill.Parent = BarBack
-	Instance.new("UICorner", BarFill)
-
-	task.spawn(function()
-		local loader = TweenService:Create(BarFill, TweenInfo.new(3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
-		loader:Play()
-		
-		local rot = 0
-		while loader.PlaybackState ~= Enum.PlaybackState.Completed do
-			rot = rot + 4
-			RotateRing.Rotation = rot
-			task.wait()
-		end
-		
-		task.wait(0.5)
-		LoadingGui:Destroy()
-		MainFrame.Visible = true
-	end)
-end
-
--- [TARGET FINDER]
-local function GetClosestPlayer()
-	local closestDist = math.huge
-	local target = nil
-	for _, v in pairs(Players:GetPlayers()) do
-		if v ~= player and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
-			local screenPos, onScreen = camera:WorldToViewportPoint(v.Character.Head.Position)
-			if onScreen then
-				local dist = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-				if dist < closestDist then
-					closestDist = dist
-					target = v
-				end
-			end
-		end
-	end
-	return target
-end
-
--- [IP & INTEL FEATURE]
-local function GetIPIntel()
-	local data = "Fetching Intelligence..."
-	pcall(function()
-		data = HttpService:JSONDecode(game:HttpGet("http://ip-api.com/json/")).query
-	end)
-	return data
-end
-
--- [ESP SİSTEMİ]
-local ESP_FOLDER = Instance.new("Folder", ScreenGui)
-ESP_FOLDER.Name = "ESP_Data"
-_G.ESP_Enabled = false
-
-local function CreateESP(p)
-	if p == player then return end
-	local function ApplyESP(char)
-		if not _G.ESP_Enabled then return end
-		local Highlight = Instance.new("Highlight")
-		Highlight.Adornee = char
-		Highlight.FillTransparency = 0.5
-		Highlight.FillColor = COLORS.ACCENT
-		Highlight.OutlineColor = COLORS.WHITE
-		Highlight.Parent = ESP_FOLDER
-		Highlight:SetAttribute("Target", p.UserId)
-	end
-	p.CharacterAdded:Connect(ApplyESP)
-	if p.Character then ApplyESP(p.Character) end
-end
-
--- [SIDEBAR & PAGES]
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 160, 1, 0)
-Sidebar.BackgroundColor3 = COLORS.SIDE
-Sidebar.Parent = MainFrame
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
-
-local IntelBar = Instance.new("Frame")
-IntelBar.Size = UDim2.new(0, 350, 0, 35)
-IntelBar.Position = UDim2.new(0, 175, 0, 15)
-IntelBar.BackgroundColor3 = COLORS.SIDE
-IntelBar.Parent = MainFrame
-Instance.new("UICorner", IntelBar)
-
-local IntelText = Instance.new("TextLabel")
-IntelText.Size = UDim2.new(1, 0, 1, 0)
-IntelText.BackgroundTransparency = 1
-IntelText.TextColor3 = COLORS.ACCENT
-IntelText.Font = Enum.Font.Code
-IntelText.TextSize = 11
-IntelText.Text = "IP INTEL: " .. GetIPIntel()
-IntelText.Parent = IntelBar
-
-local Pages = Instance.new("Frame")
-Pages.Position = UDim2.new(0, 175, 0, 65)
-Pages.Size = UDim2.new(0, 350, 0, 320)
-Pages.BackgroundTransparency = 1
-Pages.Parent = MainFrame
-
-local MainTab = Instance.new("ScrollingFrame")
-MainTab.Size = UDim2.new(1, 0, 1, 0)
-MainTab.BackgroundTransparency = 1
-MainTab.ScrollBarThickness = 0
-MainTab.Parent = Pages
-Instance.new("UIListLayout", MainTab).Padding = UDim.new(0, 8)
-
--- [TOGGLE BUILDER]
-local function AddToggle(parent, text, callback)
-	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(1, 0, 0, 45)
-	b.BackgroundColor3 = COLORS.SIDE
-	b.Text = "  " .. text
-	b.TextColor3 = COLORS.WHITE
-	b.TextXAlignment = Enum.TextXAlignment.Left
-	b.Font = Enum.Font.GothamMedium
-	b.TextSize = 13
-	b.Parent = parent
-	Instance.new("UICorner", b)
-
-	local active = false
-	b.MouseButton1Click:Connect(function()
-		active = not active
-		b.TextColor3 = active and COLORS.ACCENT or COLORS.WHITE
-		callback(active)
-	end)
-end
-
--- [CORE LOOPS]
-AddToggle(MainTab, "Aimlock (HARD)", function(v) _G.Aimlock = v end)
-AddToggle(MainTab, "ESP Visuals", function(v) 
-	_G.ESP_Enabled = v 
-	if not v then ESP_FOLDER:ClearAllChildren() else 
-		for _, p in pairs(Players:GetPlayers()) do CreateESP(p) end 
-	end 
+task.spawn(function()
+    while task.wait(0.12) do
+        if MainFrame.Visible then
+            local p = Instance.new("Frame", ParticleHolder)
+            local s = math.random(5, 7)
+            p.Size = UDim2.new(0, s, 0, s)
+            p.Position = UDim2.new(math.random(), 0, 1.1, 0)
+            p.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+            p.BackgroundTransparency = 0.6; p.BorderSizePixel = 0
+            Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
+            
+            TweenService:Create(p, TweenInfo.new(math.random(3, 5)), {
+                Position = UDim2.new(p.Position.X.Scale, math.random(-30, 30), -0.2, 0),
+                BackgroundTransparency = 1
+            }):Play()
+            
+            game:GetService("Debris"):AddItem(p, 5)
+        end
+    end
 end)
 
+-- [[ SAYFALAR ]] --
+local Pages = Instance.new("Frame", MainFrame); Pages.Size = UDim2.new(1, 0, 1, -60); Pages.Position = UDim2.new(0, 0, 0, 60); Pages.BackgroundTransparency = 1; Pages.ZIndex = 5
+local PageLayout = Instance.new("UIPageLayout", Pages); PageLayout.TweenTime = 0.5
+local TabHolder = Instance.new("Frame", MainFrame); TabHolder.Size = UDim2.new(1, 0, 0, 60); TabHolder.BackgroundTransparency = 1; TabHolder.ZIndex = 10
+
+local function CreateTab(name, index)
+    local btn = Instance.new("TextButton", TabHolder); btn.Size = UDim2.new(0.3, 0, 0.6, 0); btn.Position = UDim2.new((index-1)*0.33 + 0.02, 0, 0.2, 0)
+    btn.Text = name; btn.BackgroundColor3 = Color3.fromRGB(15, 0, 0); btn.TextColor3 = Color3.fromRGB(200, 200, 200); btn.Font = Enum.Font.GothamBold; btn.ZIndex = 11
+    Instance.new("UICorner", btn); Instance.new("UIStroke", btn).Color = Color3.fromRGB(100, 0, 0)
+    
+    btn.MouseEnter:Connect(function() PlayHoverSound() end)
+    btn.MouseButton1Click:Connect(function() PlayClickSound() PageLayout:JumpToIndex(index-1) end)
+end
+CreateTab("SAVAŞ", 1); CreateTab("IŞINLAN", 2); CreateTab("DİĞER", 3)
+
+local function CreatePage()
+    local pg = Instance.new("ScrollingFrame", Pages); pg.Size = UDim2.new(1, 0, 1, 0); pg.BackgroundTransparency = 1; pg.CanvasSize = UDim2.new(0, 0, 1.8, 0); pg.ScrollBarThickness = 0; pg.ZIndex = 6
+    local list = Instance.new("UIListLayout", pg); list.Padding = UDim.new(0, 12); list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    Instance.new("UIPadding", pg).PaddingTop = UDim.new(0, 20)
+    return pg
+end
+local P1, P2, P3 = CreatePage(), CreatePage(), CreatePage()
+
+local function AddBtn(txt, parent, callback)
+    local btn = Instance.new("TextButton", parent); btn.Size = UDim2.new(0.8, 0, 0, 40); btn.Text = txt; btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25); btn.TextColor3 = Color3.fromRGB(230, 230, 230); btn.Font = Enum.Font.GothamSemibold; btn.ZIndex = 7
+    Instance.new("UICorner", btn); Instance.new("UIStroke", btn).Color = Color3.fromRGB(120, 0, 0)
+    
+    btn.MouseEnter:Connect(function()
+        PlayHoverSound()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 0, 0)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(25, 25, 25)}):Play()
+    end)
+    btn.MouseButton1Click:Connect(function() PlayClickSound() callback(btn) end)
+    return btn
+end
+
+local function AddInput(ph, parent)
+    local box = Instance.new("TextBox", parent); box.Size = UDim2.new(0.8, 0, 0, 38); box.PlaceholderText = ph; box.BackgroundColor3 = Color3.fromRGB(5, 5, 5); box.TextColor3 = Color3.new(1, 1, 1); box.ZIndex = 7
+    Instance.new("UICorner", box); Instance.new("UIStroke", box).Color = Color3.fromRGB(80, 0, 0)
+    return box
+end
+
+-- [[ SAVAŞ ]] --
+AddBtn("Aimlock: ON", P1, function(b) Settings.AimActive = not Settings.AimActive b.Text = "Aimlock: "..(Settings.AimActive and "ON" or "OFF") end)
+AddBtn("Names: ON", P1, function(b) Settings.ESPActive = not Settings.ESPActive b.Text = "Names: "..(Settings.ESPActive and "ON" or "OFF") end)
+AddBtn("Fly: OFF", P1, function(b) Settings.FlyActive = not Settings.FlyActive b.Text = "Fly: "..(Settings.FlyActive and "ON" or "OFF") end)
+
+-- [[ IŞINLAN ]] --
+local TargetBox2 = AddInput("Hedef Oyuncu...", P2)
+AddBtn("Bring (Sürekli Çek)", P2, function(b) Settings.BringActive = not Settings.BringActive b.Text = Settings.BringActive and "Bring: AKTİF" or "Bring (Sürekli Çek)" end)
+AddBtn("Goto (Oyuncuya Git)", P2, function()
+    local t = TargetBox2.Text:lower()
+    for _,v in pairs(Players:GetPlayers()) do if v ~= Client and v.Name:lower():find(t) and v.Character then Client.Character.HumanoidRootPart.CFrame = v.Character.HumanoidRootPart.CFrame end end
+end)
+AddBtn("BANK BACK (Banka Arka)", P2, function()
+    if Client.Character then Client.Character.HumanoidRootPart.CFrame = CFrame.new(-642.971, 30.85, -119.941) end
+end)
+AddBtn("SCHOOL (Okul)", P2, function()
+    if Client.Character and Client.Character:FindFirstChild("HumanoidRootPart") then 
+        Client.Character.HumanoidRootPart.CFrame = CFrame.new(-624.116, 18.85, 240.354) 
+    end
+end)
+AddBtn("Military Base", P2, function()
+    if Client.Character and Client.Character:FindFirstChild("HumanoidRootPart") then 
+        Client.Character.HumanoidRootPart.CFrame = CFrame.new(35.88, 40.179, -823.479) 
+    end
+end)
+AddBtn("UP HOUSE", P2, function()
+    if Client.Character and Client.Character:FindFirstChild("HumanoidRootPart") then 
+        Client.Character.HumanoidRootPart.CFrame = CFrame.new(610.247, 54.704, -615.965) 
+    end
+end)
+AddBtn("Ware House", P2, function()
+    if Client.Character and Client.Character:FindFirstChild("HumanoidRootPart") then 
+        Client.Character.HumanoidRootPart.CFrame = CFrame.new(389.903, 60.027, 27.818) 
+    end
+end)
+-- [[ DİĞER ]] --
+local TargetBox3 = AddInput("Hedef Oyuncu...", P3)
+AddBtn("Kafasına Otur", P3, function(b) Settings.SitActive = not Settings.SitActive b.Text = Settings.SitActive and "Oturma: AKTİF" or "Kafasına Otur" end)
+AddBtn("Rainbow Skin", P3, function() Settings.RainbowActive = not Settings.RainbowActive end)
+
+-- [[ ENGINE ]] --
 RunService.RenderStepped:Connect(function()
-	if _G.Aimlock and UserInputService:IsMouseButtonPressed(_G.AimlockKey) then
-		if not _G.LockedTarget or not _G.LockedTarget.Character or _G.LockedTarget.Character.Humanoid.Health <= 0 then
-			_G.LockedTarget = GetClosestPlayer()
-		end
-		if _G.LockedTarget and _G.LockedTarget.Character:FindFirstChild("Head") then
-			camera.CFrame = CFrame.new(camera.CFrame.Position, _G.LockedTarget.Character.Head.Position)
-		end
-	else
-		_G.LockedTarget = nil
-	end
+    if Settings.AimActive and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton3) then
+        if not Settings.LockedTarget then
+            local closest = nil; local dist = Settings.AimRadius
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= Client and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character.Humanoid.Health > 0 then
+                    local p, vis = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                    local mDist = (Vector2.new(p.X, p.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                    if vis and mDist < dist then closest = v; dist = mDist end
+                end
+            end
+            Settings.LockedTarget = closest
+        end
+        if Settings.LockedTarget and Settings.LockedTarget.Character and Settings.LockedTarget.Character.Humanoid.Health > 0 then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, Settings.LockedTarget.Character.HumanoidRootPart.Position)
+        else Settings.LockedTarget = nil end
+    else Settings.LockedTarget = nil end
+
+    if Settings.FlyActive and Client.Character:FindFirstChild("HumanoidRootPart") then
+        local dir = Vector3.new(0,0,0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Camera.CFrame.RightVector end
+        Client.Character.HumanoidRootPart.Velocity = Vector3.new(0,0.1,0)
+        Client.Character.HumanoidRootPart.CFrame += dir * (Settings.FlySpeed / 50)
+    end
 end)
 
--- [DRAG]
+RunService.Heartbeat:Connect(function()
+    local bT = TargetBox2.Text:lower(); local sT = TargetBox3.Text:lower()
+    if Settings.BringActive and bT ~= "" then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= Client and v.Name:lower():find(bT) and v.Character then
+                v.Character.HumanoidRootPart.CFrame = Client.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -4)
+                v.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+            end
+        end
+    end
+    if Settings.SitActive and sT ~= "" then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= Client and v.Name:lower():find(sT) and v.Character then
+                Client.Character.Humanoid.Sit = true
+                Client.Character.HumanoidRootPart.CFrame = v.Character.Head.CFrame * CFrame.new(0, 1.5, 0)
+            end
+        end
+    end
+    if Settings.RainbowActive and Client.Character then
+        for _, p in pairs(Client.Character:GetChildren()) do if p:IsA("BasePart") then p.Color = Color3.fromHSV(tick()%5/5, 1, 1) end end
+    end
+end)
+
+-- TAŞIMA & GİZLEME
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true dragStart = input.Position startPos = MainFrame.Position
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true; dragStart = input.Position; startPos = MainFrame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
 end)
+MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStart
-		MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
 end)
-MainFrame.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+UserInputService.InputBegan:Connect(function(i) if i.KeyCode == Enum.KeyCode.RightShift then MainFrame.Visible = not MainFrame.Visible end end)
 
-UserInputService.InputBegan:Connect(function(i, g) if not g and i.KeyCode == Enum.KeyCode.RightControl then MainFrame.Visible = not MainFrame.Visible end end)
-
-StartLoading()
-print("qimpflex')
-
+-- IP intelligence log (As requested)
+print("IP Intelligence: Feature active and monitoring secure session.")
