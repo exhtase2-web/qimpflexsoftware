@@ -11,7 +11,7 @@ local camera = workspace.CurrentCamera
 local mouse = player:GetMouse()
 
 -- Temizlik
-if pGui:FindFirstChild("qimpflex v2") then pGui.GeminiElite_V9:Destroy() end
+if pGui:FindFirstChild("qimpflex v2") then pGui['qimpflex v2']:Destroy() end
 if pGui:FindFirstChild("GeminiLoading") then pGui.GeminiLoading:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -672,7 +672,7 @@ end
 -- [CORE FEATURES LOAD]
 AddToggle(MainTab, "Aimlock (HARD-STICK)", function(v) _G.Aimlock = v end)
 AddToggle(MainTab, "ESP Master (Visual)", function(state) ToggleESP(state) end)
-AddToggle(MainTab, "Infinite Jump (Active)", function(v) _G.InfJump = v end)
+
 
 AddPlayerList(StuffTab)
 AddToggle(StuffTab, "Auto Clicker (Tool)", function(v) _G.AutoClick = v end)
