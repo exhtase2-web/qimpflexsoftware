@@ -732,4 +732,5 @@ MainTab.Visible = true
 
 -- [KODU BAŞLAT]
 StartLoading()
-print("Gemini Elite V9 UI Enhanced - Ready.")
+print("qimpflex Hub İs Loaded if u want buy premium version contach with 'qimpflex' on discord .")
+
