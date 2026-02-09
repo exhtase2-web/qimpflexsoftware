@@ -20,7 +20,7 @@ local function GetSafeParent()
 	return pGui -- Bypass başarısız olursa çökmemesi için geri dönüş yolu
 end
 
-local SafeParent = GetSafeParent()
+local SafeParent = game:GetService('CoreGui')
 
 -- Temizlik (Artık SafeParent içinde arıyor)
 if SafeParent:FindFirstChild("qimpflex v2") then SafeParent['qimpflex v2']:Destroy() end
